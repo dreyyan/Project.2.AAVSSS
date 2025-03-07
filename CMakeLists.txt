@@ -3,4 +3,5 @@ project(AAVSSS__v1_0_)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(AAVSSS__v1_0_ main.cpp)
+add_executable(AAVSSS__v1_0_ main.cpp
+        main.h)
