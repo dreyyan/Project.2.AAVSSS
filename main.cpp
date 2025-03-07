@@ -1,33 +1,83 @@
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <functional>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <random>
+#include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <vector>
-#include <openssl/sha.h>
 using namespace std;
 
 // Project: ADVANCED AUTOMATED VEHICLE STORAGE AND SIMULATION SYSTEM (AAVSSS)
 // Author: dreyyan
 // Creation Date: 03/07/2025
 
+// INSTRUCTIONS:
+// * Set launch size to 50 x 46
 enum VehicleColor {
-    UNKNOWN = -1,                                               // CUSTOM COLORS
-    BLACK, SILVER, WHITE, GRAY, BEIGE,                          // MONOCHROMATIC COLORS
-    RED, ORANGE, YELLOW, GREEN, BLUE, VIOLET,                   // BASIC COLORS
-    VEHICLE_COLOR_COUNT
+    UNKNOWN_COLOR = -1,
+    RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, MAGENTA, VIOLET,    // WHEEL COLORS
+    BEIGE, GRAY, SILVER, WHITE, BLACK,                          // MONOCHROMATIC COLORS
+    VEHICLE_COLOR_COUNT                                         // OTHER COLORS
 };
 
+map<VehicleColor, string> color_codes = {
+    {RED, "\033[31m"},
+    {ORANGE, "\033[91m"},
+    {YELLOW, "\033[33m"},
+    {GREEN, "\033[32m"},
+    {CYAN, "\033[36m"},
+    {BLUE, "\033[34m"},
+    {MAGENTA, "\033[35m"},
+    {VIOLET, "\033[95m"},
+    {BEIGE, "\033[93m"},
+    {GRAY, "\033[90m"},
+    {SILVER, "\033[37m"},
+    {WHITE, "\033[97m"},
+    {BLACK, "\033[30;47m"},
+    {UNKNOWN_COLOR, "\033[0m"} // Reset
+};
+
+
 enum VehicleMake {
+    UNKNOWN_MAKE = -1,
     TOYOTA, HONDA, NISSAN, MAZDA, SUBARU, MITSUBISHI, SUZUKI,   // JAPANESE MAKES
     FORD, CHEVROLET, DODGE, JEEP, TESLA,                        // U.S. MAKES
     VOLKSWAGEN, BMW, MERCEDES_BENZ, AUDI, PORSCHE,              // GERMAN MAKES
     MASERATI, FERRARI, LAMBORGHINI,                             // ITALIAN MAKES
     HYUNDAI, KIA,                                               // KOREAN MAKES
     VEHICLE_MAKE_COUNT
+};
+
+const vector<pair<string_view, VehicleColor>> vehicle_color_list = {
+    {"RED", VehicleColor::RED}, {"ORANGE", VehicleColor::ORANGE},
+    {"YELLOW", VehicleColor::YELLOW}, {"GREEN", VehicleColor::GREEN},
+    {"CYAN", VehicleColor::CYAN}, {"BLUE", VehicleColor::BLUE},
+    {"MAGENTA", VehicleColor::MAGENTA}, {"VIOLET", VehicleColor::VIOLET},
+    {"BEIGE", VehicleColor::BEIGE}, {"GRAY", VehicleColor::GRAY},
+    {"SILVER", VehicleColor::SILVER}, {"WHITE", VehicleColor::WHITE},
+    {"BLACK", VehicleColor::BLACK}
+};
+
+const unordered_map<string_view, VehicleMake> vehicle_make_list = {
+    {"TOYOTA", VehicleMake::TOYOTA}, {"HONDA", VehicleMake::HONDA},
+    {"NISSAN", VehicleMake::NISSAN}, {"MAZDA", VehicleMake::MAZDA},
+    {"SUBARU", VehicleMake::SUBARU}, {"MITSUBISHI", VehicleMake::MITSUBISHI},
+    {"SUZUKI", VehicleMake::SUZUKI}, {"FORD", VehicleMake::FORD},
+    {"CHEVROLET", VehicleMake::CHEVROLET}, {"DODGE", VehicleMake::DODGE},
+    {"JEEP", VehicleMake::JEEP}, {"TESLA", VehicleMake::TESLA},
+    {"VOLKSWAGEN", VehicleMake::VOLKSWAGEN}, {"BMW", VehicleMake::BMW},
+    {"MERCEDES_BENZ", VehicleMake::MERCEDES_BENZ}, {"AUDI", VehicleMake::AUDI},
+    {"PORSCHE", VehicleMake::PORSCHE}, {"MASERATI", VehicleMake::MASERATI},
+    {"FERRARI", VehicleMake::FERRARI}, {"LAMBORGHINI", VehicleMake::LAMBORGHINI},
+    {"HYUNDAI", VehicleMake::HYUNDAI}, {"KIA", VehicleMake::KIA}
 };
 
 unordered_map<VehicleMake, unordered_map<string, unsigned int>> vehicle_models = {
@@ -55,29 +105,13 @@ unordered_map<VehicleMake, unordered_map<string, unsigned int>> vehicle_models =
     {KIA, {{"Sportage", 1993}, {"Seltos", 2019}, {"Stinger", 2017}}}
 };
 
-class Vehicle {
-protected:
-    /* ATTRIBUTES */
-    unique_ptr<string> id, model, license_plate;
-    unsigned int year;
-    VehicleColor color;
-    VehicleMake make;
-public:
-    /* CONSTRUCTOR */
-    Vehicle() {} // Default Constructor
-    Vehicle(string id, VehicleColor color, VehicleMake make, string model, string license_plate, unsigned int year)
-    : id(make_unique<string>(move(id))),
-    color(color),
-    make(make),
-    model(make_unique<string>(move(model))),
-    license_plate(make_unique<string>(move(license_plate))),
-    year(year) {} // Parameterized Constructor
-
-    /* UTILITIES */
+struct Utilities {
     void display_format(size_t length) {
         for (size_t i = 0; i < length; ++i) {
             cout << '-';
         } cout << '\n';
+    } void space(size_t n) {
+        for (size_t i = 0; i < n; ++i) { cout << '\n'; }
     } void delay(int ms) {
         this_thread::sleep_for(chrono::milliseconds(ms));
     } void press_enter_to_continue() {
@@ -87,27 +121,47 @@ public:
         cout << "[ ERROR: " << error_message << " ]\n";
     } void trim(string& string_input) {
         string_input.erase(0, string_input.find_first_not_of(" ")); // Remove leading whitespaces
-        string_input.erase(find_last_not_of(" ") + 1); // Remove trailing whitespaces
+        string_input.erase(string_input.find_last_not_of(" ") + 1); // Remove trailing whitespaces
     } void to_lowercase(string& string_input) {
         transform(string_input.begin(), string_input.end(), string_input.begin(), ::tolower);
-    } void ask_yes_no(const string& question) {
-        string user_input;
-        while (true) {
-            cout << question << "(yes/no):\n";
-            display_format(question.length());
-            getline(cin, user_input);
-
-            if (user_input == "") display_error_message("Empty input");
-            else {
-                trim(user_input); // Remove leading & trailing whitespaces
-                to_lowercase(user_input); // Convert to lowercase
-                if (user_input == "yes" || user_input == "no") break;
-                else display_error_message("Invalid input");
-            }
-        }
-
-        if (user_input == "yes")
+    } void to_uppercase(string& string_input) {
+        transform(string_input.begin(), string_input.end(), string_input.begin(), ::toupper);
+    } void move_cursor(int up, int down, int right, int left) {
+        cout << "\033[" << up << 'A';
+        cout << "\033[" << down << 'B';
+        cout << "\033[" << right << 'C';
+        cout << "\033[" << left << 'D';
+    } void clear_screen() {
+        #ifdef _WIN32
+            system("cls");
+        #else
+            system("clear");
+        #endif
     }
+};
+
+class Vehicle {
+private:
+protected:
+    /* ATTRIBUTES */
+    unique_ptr<string> id, model, license_plate;
+    unsigned int year;
+    VehicleColor color;
+    VehicleMake make;
+public:
+    /* REFERENCE */
+    Utilities &utility;
+
+    /* CONSTRUCTOR */
+    Vehicle(Utilities &utility) : Vehicle(utility, "", VehicleColor::UNKNOWN_COLOR, VehicleMake::UNKNOWN_MAKE, "", "", 0) {}
+    Vehicle(Utilities &utility, string id, VehicleColor color, VehicleMake make, string model, string license_plate, unsigned int year)
+    : utility(utility),
+    id(make_unique<string>(move(id))),
+    color(color),
+    make(make),
+    model(make_unique<string>(move(model))),
+    license_plate(make_unique<string>(move(license_plate))),
+    year(year) {} // Parameterized Constructor
 
     /* GETTERS */
     string get_id() const { return *id; }
@@ -125,59 +179,186 @@ public:
     }
 
     /* HASHING */
-    string sha256(const string& input) { // Hash a string using SHA-256
-        unsigned char hash[SHA256_DIGEST_LENGTH];
-        SHA256((unsigned char*)input.c_str(), input.size(), hash);
-
-        stringstream ss;
-        for (unsigned char i : hash) {
-            ss << hex << setw(2) << setfill('0') << (int)i;
-        }
-        return ss.str();
-    }
-
-    string generate_secure_hash() { // Generate secure hash using SHA256
+    hash<string> hasher;
+    string generate_hash() {
         random_device rd;
-        mt19937_64 generator(rd());
-        uniform_int_distribution<uint64_t> dist;
+        mt19937_64 gen(rd());
+        uniform_int_distribution<uint64_t> dist(0, UINT64_MAX);
+        ostringstream hash;
 
-        uint64_t random_number = dist(generator); // Generate a secure random number
-        return sha256(to_string(random_number));  // Hash the random number
+        for (int i = 0; i < 4; i++)  // Generate 256 bits (4 × 64-bit numbers)
+            hash << std::hex << std::setw(16) << std::setfill('0') << dist(gen);
+
+        return hash.str();
     }
+
 
     /* METHODS */
-    string generate_vehicle_id() {
-        return generate_secure_hash();
-    }
-    VehicleColor choose_vehicle_color() {
+    void ask_to_create_vehicle(const string& question) {
+        string user_input;
         while (true) {
-            for (int i = 0; i < VehicleColor.)
+            cout << question << "(yes/no):\n";
+            utility.display_format(question.length());
+            getline(cin, user_input);
+
+            if (user_input == "") utility.display_error_message("Empty input");
+            else {
+                utility.trim(user_input); // Remove leading & trailing whitespaces
+                utility.to_lowercase(user_input); // Convert to lowercase
+                if (user_input == "yes" || user_input == "no") break;
+                else utility.display_error_message("Invalid input");
+            }
+        }
+        if (user_input == "yes") create_vehicle();
+        else return;
+    }
+
+    string generate_vehicle_id() {
+        return generate_hash();
+    }
+
+    void choose_vehicle_color() {
+        string input_color_str;
+
+        while (true) {
+            // Display colors list
+            cout << "[ COLORS ]\n";
+            utility.display_format(10);
+
+            for (const auto& color : vehicle_color_list) {
+                cout << color_codes[color.second] << color.first << "\033[0m" << '\n';
+            } utility.display_format(10);
+
+            // Prompt user to enter vehicle color
+            cout << "Choose color: ";
+            getline(cin, input_color_str);
+
+            if (input_color_str == "") utility.display_error_message("Empty input");
+            else {
+                utility.trim(input_color_str); // Remove leading & trailing whitespaces
+                utility.to_uppercase(input_color_str); // Convert to uppercase
+                string_view input_color(input_color_str); // Convert to view-only
+
+                // Search if color exists in the unordered map
+                auto it = find_if(vehicle_color_list.begin(), vehicle_color_list.end(),
+                    [&](const auto& pair) { return pair.first == input_color; });
+
+                if (it == vehicle_color_list.end()) { // If vehicle is not found
+                    utility.display_error_message("Color does not exist");
+                } else {
+                    set_color(it->second); // Set vehicle color
+                    cout << "Vehicle color set to '" << it->first << "'\n";
+                    break;
+                }
+            }
         }
     }
-    void choose_vehicle_make() {}
-    void choose_vehicle_model() {}
-    void generate_license_plate() {}
 
-    void create_vehicle() { cout << "creating vehicle...\n";
-        string vehicle_id;
-        VehicleColor vehicle_color;
-        VehicleMake vehicle_make;
+    void choose_vehicle_make() {
+        string input_make_str;
 
-        // Generate unique & secure(hashed) vehicle id
-        vehicle_id = generate_vehicle_id();
-        // Prompt user to enter vehicle color
-        vehicle_color = choose_vehicle_color();
-        // Prompt user to enter vehicle make
-        // Prompt user to enter vehicle model based on make
-        // Assign the license plate based on id + make + model + year
+        while (true) {
+            // Display makes list
+            for (const auto& make : vehicle_make_list) {
+                cout << make.first << '\n';
+            }
 
+            // Prompt user to enter vehicle make
+            cout << "Choose make: ";
+            getline(cin, input_make_str);
+
+            if (input_make_str == "") utility.display_error_message("Empty input");
+            else {
+                utility.trim(input_make_str); // Remove leading & trailing whitespaces
+                utility.to_uppercase(input_make_str); // Convert to uppercase
+                string_view input_make(input_make_str); // Convert to view-only
+
+                // Check if make exists
+                auto it = vehicle_make_list.find(input_make);
+
+                if (it == vehicle_make_list.end()) { // ERROR: Non-existing make
+                    utility.display_error_message("make does not exist");
+                } else {
+                    make = it->second; // Set vehicle make
+                    cout << "Vehicle make set to '" << it->first << "'\n";
+                    break;
+                }
+            }
+        }
     }
 
+    void choose_vehicle_model() {
+        string input_model;
+        bool model_exists;
+
+        while (true) {
+            model_exists = false;
+            auto make_models = vehicle_models.find(make);
+            if (make_models != vehicle_models.end()) { // If a vehicle model is found in a make
+                // Display vehicle models
+                for (const auto& model : make_models->second) {
+                    cout << model.first << '\n';
+                }
+            } else {
+                utility.display_error_message("No models for this make");
+                return;
+            }
+
+            // Prompt user to enter model
+            cout << "Choose model: ";
+            getline(cin, input_model);
+
+            if (input_model == "") utility.display_error_message("Empty input");
+            else {
+                utility.trim(input_model); // Remove leading & trailing whitespaces
+                utility.to_uppercase(input_model); // Convert to uppercase
+
+                // Check if model exists
+                for (const auto& make_model : make_models->second) {
+                    if (input_model == make_model.first) { // If existing model
+                        model_exists = true;
+                        model = make_unique<string>(make_model.first); // Set model
+                        break;
+                    }
+                }
+
+                if (!model_exists) { // ERROR: Non-existing model
+                    utility.display_error_message("Model does not exist");
+                }
+            }
+        }
+    }
+
+    void generate_license_plate(string vehicle_id) {
+        string sub_id = vehicle_id.substr(0, 4);
+        set_license_plate(sub_id);
+    }
+
+    /* COMMAND FUNCTIONS */
+    void create_vehicle() {
+        string vehicle_id;
+        // Generate unique & secure(hashed) vehicle id
+        vehicle_id = generate_hash();
+        // Prompt user to enter vehicle color
+        choose_vehicle_color();
+        // Prompt user to enter vehicle make
+        choose_vehicle_make();
+        // Prompt user to enter vehicle model based on make
+        choose_vehicle_model();
+        // Assign the license plate based on id + make + model + year
+        generate_license_plate(vehicle_id);
+
+        Vehicle(utility, vehicle_id, color, make, *model, *license_plate, year); // Create object vehicle
+    }
+
+    void goto_garage() {}
+    const void view_makes() {}
+    const void view_models() {}
     const void display_vehicle_details() {
         // ERROR: Uninitialized vehicle details
         if (!id || !make || !model || !license_plate) {
-        display_error_message("Vehicle details are not initialized");
-            ask_yes_no("Would you like to add one?");
+        utility.display_error_message("Vehicle details are not initialized");
+            ask_to_create_vehicle("Would you like to add one?");
         }
         cout << "[ VEHICLE DETAILS ]\n";
         cout << "ID: " << get_id() << '\n';
@@ -187,17 +368,87 @@ public:
         cout << "License Plate: " << get_license_plate() << '\n';
         cout << "Year: " << get_year() << '\n';
     }
+
+    void exit_menu() {
+        cout << "exiting AAVSSS...\n";
+        exit(0);
+    }
 };
+
+class VehicleUI {
+    Vehicle &vehicle;
+public:
+    /* CONSTRUCTOR */
+    VehicleUI(Vehicle &vehicle)
+    : vehicle(vehicle) {} // Parameterized Constructor
+
+    static constexpr int num_of_commands = 6; // Edit to change # of commands
+
+    // To store command-descriptions
+    array<array<string, 2>, num_of_commands> command_to_description = {
+        array<string, 2>{"create", "Create vehicle"},
+        array<string, 2>{"garage", "Manage garage"},
+        array<string, 2>{"makes", "Display available vehicle makes"},
+        array<string, 2>{"models", "Display available vehicle models"},
+        array<string, 2>{"details", "Display vehicle details"},
+        array<string, 2>{"exit", "Exit"}
+    };
+
+    // To store command-functions
+    unordered_map<string, function<void()>> command_to_function = {
+        {"create", [&]() { vehicle.create_vehicle(); }},
+        {"garage", [&]() { vehicle.goto_garage(); }},
+        {"makes", [&]() { vehicle.view_makes(); }},
+        {"models", [&]() { vehicle.view_models(); }},
+        {"details", [&]() { vehicle.display_vehicle_details(); }},
+        {"exit", [&]() { vehicle.exit_menu(); }}
+    };
+
+    /* METHODS */
+    void display_menu() {
+        string command;
+
+        while (true) {
+            // Display header
+            vehicle.utility.display_format(50); vehicle.utility.delay(100); vehicle.utility.space(1); vehicle.utility.delay(100);
+            cout << setw(3) << ' ' << "[*]-[*]-[*]-[*] A.A.V.S.S.S. [*]-[*]-[*]-[*]\n"; vehicle.utility.delay(100);
+            vehicle.utility.space(1); vehicle.utility.delay(100); vehicle.utility.display_format(50); vehicle.utility.delay(100); vehicle.utility.space(1); vehicle.utility.delay(100);
+
+            // Display commands
+            for (int i = 0; i < command_to_description.size(); ++i) {
+                cout << setw(2) << ' ' << setw(8) << left << '.' + command_to_description[i][0] << setw(2) << ' ' << "|   ";
+                cout << left << setw(34) << command_to_description[i][1] << '\n';
+                vehicle.utility.delay(100);
+            } vehicle.utility.space(1); vehicle.utility.delay(100); vehicle.utility.display_format(50); vehicle.utility.delay(100); vehicle.utility.space(1); vehicle.utility.delay(100);
+
+            // Prompt user to enter command
+            cout << " Enter command: .\n";
+            vehicle.utility.space(1); vehicle.utility.delay(100); vehicle.utility.display_format(50); vehicle.utility.delay(100);
+            vehicle.utility.move_cursor(4, 0, 18, 0);
+            getline(cin, command);
+
+            if (command == "") vehicle.utility.display_error_message("Empty input");
+            else {
+                vehicle.utility.trim(command); // Remove leading & trailing whitespaces
+                vehicle.utility.to_lowercase(command); // Convert to uppercase
+
+                if (command_to_function.find(command) != command_to_function.end()) {
+                    vehicle.utility.clear_screen(); // Clear screen before invoking function
+                    command_to_function[command](); // Invoke function
+                    vehicle.utility.press_enter_to_continue();
+                } else {
+                    vehicle.utility.display_error_message("Invalid command");
+                }
+            }
+        }
+    }
+};
+
 // id, color, make, model, license plate, year
 int main() {
-    Vehicle vehicle;
-    vehicle.display_vehicle_details();
-    /*Vehicle(
-    "1HGCM82633A123456",
-    VehicleColor::BLACK,
-    VehicleMake::HONDA,
-    "Ci",
-    "ABA-5146",
-    2003);*/
+    Utilities utility;
+    Vehicle vehicle(utility);
+    VehicleUI vehicle_ui(vehicle);
+    vehicle_ui.display_menu();
     return 0;
 }
