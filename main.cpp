@@ -103,6 +103,10 @@ struct Utilities {
     void display_format(size_t length) {
         for (size_t i = 0; i < length; ++i) {
             cout << '-';
+        } delay(100);
+    } void display_spaced_format(size_t length) {
+        for (size_t i = 0; i < length; ++i) {
+            cout << '-';
         } delay(100); cout << '\n';
     } void display_alternate_format(size_t length, char symbol) {
         for (size_t i = 0; i < length; ++i) {
@@ -250,13 +254,12 @@ public:
         return hash.str();
     }
 
-
     /* METHODS */
     void ask_to_create_vehicle(const string& question) {
         string user_input;
         while (true) {
             cout << question << "(yes/no):\n";
-            utility.display_format(question.length());
+            utility.display_spaced_format(question.length());
             getline(cin, user_input);
 
             if (user_input == "") {
@@ -474,8 +477,8 @@ public:
     void goto_garage() {
         while (true) {
             utility.character_delay_animation("[ GARAGE ]\n", 25);
-            utility.display_format(30);
-            utility.display_format(30);
+            utility.display_spaced_format(30);
+            utility.display_spaced_format(30);
             cin.get();
         }
 
@@ -489,14 +492,14 @@ public:
             ask_to_create_vehicle("Would you like to add one?");
         }
         utility.character_delay_animation("[ VEHICLE DETAILS ]\n", 25);
-        utility.display_format(24);
+        utility.display_spaced_format(24);
         cout << "ID: " << get_id() << '\n'; utility.delay(200);
         cout << "Color: " << get_color() << '\n'; utility.delay(200);
         cout << "Make: " << get_make() << '\n'; utility.delay(200);
         cout << "Model: " << get_model() << '\n'; utility.delay(200);
         cout << "License Plate: " << get_license_plate() << '\n'; utility.delay(200);
         cout << "Year: " << get_year() << '\n'; utility.delay(200);
-        utility.display_format(24);
+        utility.display_spaced_format(24);
     }
 
     void exit_menu() {
@@ -540,20 +543,19 @@ public:
 
         while (true) {
             // Display header
-            vehicle.utility.display_format(50); vehicle.utility.delay(100);
+            vehicle.utility.display_spaced_format(50); vehicle.utility.delay(100); vehicle.utility.space(1);
             cout << setw(3) << ' ' << "[*]-[*]-[*]-[*] A.A.V.S.S.S. [*]-[*]-[*]-[*]\n"; vehicle.utility.delay(100);
-            vehicle.utility.space(1); vehicle.utility.delay(100); vehicle.utility.display_format(50); vehicle.utility.delay(100); vehicle.utility.space(1); vehicle.utility.delay(100); vehicle.utility.space(1); vehicle.utility.delay(100);
+            vehicle.utility.space(1); vehicle.utility.delay(100); vehicle.utility.display_spaced_format(50); vehicle.utility.delay(100); vehicle.utility.space(1); vehicle.utility.delay(100);
 
             // Display commands
             for (int i = 0; i < menu_command_to_description.size(); ++i) {
                 cout << setw(2) << ' ' << setw(8) << left << '.' + menu_command_to_description[i][0] << setw(2) << ' ' << "|   ";
                 cout << left << setw(34) << menu_command_to_description[i][1] << '\n';
                 vehicle.utility.delay(100);
-            } vehicle.utility.space(1); vehicle.utility.delay(100); vehicle.utility.display_format(50); vehicle.utility.delay(100);
+            } vehicle.utility.space(1); vehicle.utility.delay(100); vehicle.utility.display_spaced_format(50); vehicle.utility.delay(100);
 
-            vehicle.utility.space(2); vehicle.utility.delay(100); vehicle.utility.display_format(50); vehicle.utility.delay(100);
+            vehicle.utility.space(1); vehicle.utility.delay(100); vehicle.utility.display_format(50); vehicle.utility.delay(100);
             // Prompt user to enter command
-            vehicle.utility.move_cursor(5, 0, 12, 0);
             vehicle.utility.character_delay_animation(" Enter command: .", 25);
             getline(cin, command);
 
