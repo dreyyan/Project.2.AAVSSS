@@ -16,12 +16,6 @@
 #include <vector>
 using namespace std;
 
-// Project: ADVANCED AUTOMATED VEHICLE STORAGE AND SIMULATION SYSTEM (AAVSSS)
-// Author: dreyyan
-// Creation Date: 03/07/2025
-
-// INSTRUCTIONS:
-// * Set terminal launch size to 50 x 46
 enum VehicleColor {
     UNKNOWN_COLOR = -1,
     RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, MAGENTA, VIOLET,    // WHEEL COLORS
